@@ -358,6 +358,7 @@ long sgx_ioc_page_remove(struct file *filep, unsigned int cmd,
 		return -EINVAL;
 	}
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_RM_PAGE]);
 	ret = remove_page(encl, address, false);
 	if (ret) {
 		pr_warn("sgx: Failed to remove page, address=0x%lx ret=%d\n",

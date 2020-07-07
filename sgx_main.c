@@ -98,6 +98,37 @@ u32 sgx_misc_reserved;
 u32 sgx_xsave_size_tbl[64];
 bool sgx_has_sgx2;
 
+static const char *sgx_profile_str[] = {
+	/* SGX commands */
+	"ECREATE",  // 0x0
+	"EADD",     // 0x1
+	"EINIT",    // 0x2
+	"EREMOVE",  // 0x3
+	"EDGBRD",   // 0x4
+	"EDBGWR",   // 0x5
+	"EEXTEND",  // 0x6
+	"NONE",     // 0x7
+	"ELDU",     // 0x8
+	"EBLOCK",   // 0x9
+	"EPA",      // 0xA
+	"EWB",      // 0xB
+	"ETRACK",   // 0xC
+	"EAUG",     // 0xD
+	"EMODPR",   // 0xE
+	"EMODT",    // 0xF
+
+	/* Other operations */
+	"swap",     // 0x10
+	"vma_fault",    // 0x11
+	"alloc_page",    // 0x12
+	"free_page",    // 0x13
+	"evict",    // 0x14
+	"swap_time",    // 0x15
+	"ioc_remove_page",    // 0x15
+};
+
+atomic_t profile_sgx_cnt[PROFILE_SGX_CNT_NUM] = { ATOMIC_INIT(0) };
+
 #ifdef CONFIG_COMPAT
 long sgx_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
@@ -284,6 +315,38 @@ out_iounmap:
 	return ret;
 }
 
+static int proc_sgx_profile_show(struct seq_file *seqf, void *v)
+{
+	int i;
+
+	for (i = 0; i < PROFILE_SGX_CNT_NUM; i++)
+		seq_printf(seqf, "%d %s %u\n",
+				i, sgx_profile_str[i], atomic_read(&profile_sgx_cnt[i]));
+	return 0;
+}
+
+static int proc_sgx_profile_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, proc_sgx_profile_show, NULL);
+}
+
+static ssize_t proc_sgx_profile_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *offp)
+{
+	int i;
+
+	for (i = 0; i < PROFILE_SGX_CNT_NUM; i++)
+		atomic_set(&profile_sgx_cnt[i], 0);
+	return count;
+}
+
+static const struct file_operations proc_sgx_profile_cnt_ops = {
+	.open   = proc_sgx_profile_open,
+	.read   = seq_read,
+	.write  = proc_sgx_profile_write,
+	.release    = seq_release,
+};
+
 static atomic_t sgx_init_flag = ATOMIC_INIT(0);
 static int sgx_drv_probe(struct platform_device *pdev)
 {
@@ -328,6 +391,9 @@ static int sgx_drv_probe(struct platform_device *pdev)
 	}
 
 	sgx_has_sgx2 = (eax & 2) != 0;
+
+	printk(KERN_INFO "SGX profile: profiling %lu events\n", PROFILE_SGX_CNT_NUM);
+	proc_create("sgx_profile_cnt", S_IRUGO|S_IWUGO, NULL, &proc_sgx_profile_cnt_ops);
 
 	return sgx_dev_init(&pdev->dev);
 }

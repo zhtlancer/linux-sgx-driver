@@ -308,6 +308,8 @@ static bool sgx_ewb(struct sgx_encl *encl,
 static void sgx_evict_page(struct sgx_encl_page *entry,
 			   struct sgx_encl *encl)
 {
+	atomic_inc(&profile_sgx_cnt[PROFILE_EVICT]);
+
 	sgx_ewb(encl, entry);
 	sgx_free_page(entry->epc_page, encl);
 	entry->epc_page = NULL;
@@ -361,6 +363,11 @@ static void sgx_swap_pages(unsigned long nr_to_scan)
 	struct sgx_tgid_ctx *ctx;
 	struct sgx_encl *encl;
 	LIST_HEAD(cluster);
+	uint64_t ts;
+
+	atomic_inc(&profile_sgx_cnt[PROFILE_SWAP]);
+
+	ts = ktime_get_ns();
 
 	ctx = sgx_isolate_tgid_ctx(nr_to_scan);
 	if (!ctx)
@@ -378,6 +385,9 @@ static void sgx_swap_pages(unsigned long nr_to_scan)
 	kref_put(&encl->refcount, sgx_encl_release);
 out:
 	kref_put(&ctx->refcount, sgx_tgid_ctx_release);
+
+	ts = ktime_get_ns() - ts;
+	atomic_add(ts / 1000, &profile_sgx_cnt[PROFILE_SWAP_TIME]);
 }
 
 static int ksgxswapd(void *p)
@@ -496,6 +506,8 @@ struct sgx_epc_page *sgx_alloc_page(unsigned int flags)
 {
 	struct sgx_epc_page *entry;
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_ALLOC_PAGE]);
+
 	for ( ; ; ) {
 		entry = sgx_alloc_page_fast();
 		if (entry)
@@ -540,6 +552,8 @@ void sgx_free_page(struct sgx_epc_page *entry, struct sgx_encl *encl)
 {
 	void *epc;
 	int ret;
+
+	atomic_inc(&profile_sgx_cnt[PROFILE_FREE_PAGE]);
 
 	epc = sgx_get_page(entry);
 	ret = __eremove(epc);

@@ -123,6 +123,8 @@ static int sgx_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 #endif
 	struct sgx_encl_page *entry;
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_VMA_FAULT]);
+
 	entry = sgx_fault_page(vma, addr, 0, vmf);
 
 	if (!IS_ERR(entry) || PTR_ERR(entry) == -EBUSY)

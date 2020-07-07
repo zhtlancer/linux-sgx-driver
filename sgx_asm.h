@@ -63,6 +63,7 @@
 #include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/types.h>
+#include <linux/atomic.h>
 
 #define SGX_CPUID 0x12
 
@@ -96,9 +97,39 @@ enum sgx_commands {
 #define XAX "%%eax"
 #endif
 
+enum sgx_profile_entry {
+	PROFILE_ECREATE	= 0x0,
+	PROFILE_EADD	= 0x1,
+	PROFILE_EINIT	= 0x2,
+	PROFILE_EREMOVE	= 0x3,
+	PROFILE_EDGBRD	= 0x4,
+	PROFILE_EDGBWR	= 0x5,
+	PROFILE_EEXTEND	= 0x6,
+	PROFILE_ELDU	= 0x8,
+	PROFILE_EBLOCK	= 0x9,
+	PROFILE_EPA	= 0xA,
+	PROFILE_EWB	= 0xB,
+	PROFILE_ETRACK	= 0xC,
+	PROFILE_EAUG	= 0xD,
+	PROFILE_EMODPR	= 0xE,
+	PROFILE_EMODT	= 0xF,
+
+	PROFILE_SWAP    = 0x10,
+	PROFILE_VMA_FAULT    = 0x11,
+	PROFILE_ALLOC_PAGE    = 0x12,
+	PROFILE_FREE_PAGE    = 0x13,
+	PROFILE_EVICT    = 0x14,
+	PROFILE_SWAP_TIME    = 0x15,
+	PROFILE_IOC_RM_PAGE    = 0x16,
+};
+
+#define PROFILE_SGX_CNT_NUM (sizeof(sgx_profile_str)/sizeof(char *))
+extern atomic_t profile_sgx_cnt[];
+
 #define __encls_ret(rax, rbx, rcx, rdx)			\
 	({						\
 	int ret;					\
+	atomic_inc(&profile_sgx_cnt[rax]);      \
 	asm volatile(					\
 	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
 	"2:\n"						\
@@ -116,6 +147,7 @@ enum sgx_commands {
 #define __encls(rax, rbx, rcx, rdx...)			\
 	({						\
 	int ret;					\
+	atomic_inc(&profile_sgx_cnt[rax]);      \
 	asm volatile(					\
 	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
 	"   xor "XAX","XAX"\n"				\
