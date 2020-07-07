@@ -393,8 +393,12 @@ static int sgx_validate_secs(const struct sgx_secs *secs,
 			return -EINVAL;
 	}
 
-	if ((secs->xfrm & 0x3) != 0x3 || (secs->xfrm & ~sgx_xfrm_mask))
+	if ((secs->xfrm & 0x3) != 0x3 || (secs->xfrm & ~sgx_xfrm_mask)) {
+		printk(KERN_ERR "%s:%d xfrm %lx and sgx_xfrm_mask %lx mismatch\n",
+				__func__, __LINE__,
+				(unsigned long)secs->xfrm, (unsigned long)sgx_xfrm_mask);
 		return -EINVAL;
+	}
 
 	/* Check that BNDREGS and BNDCSR are equal. */
 	if (((secs->xfrm >> 3) & 1) != ((secs->xfrm >> 4) & 1))
