@@ -568,6 +568,7 @@ static struct sgx_encl *sgx_encl_alloc(struct sgx_secs *secs)
 	encl->ssaframesize = secs->ssaframesize;
 	encl->backing = backing;
 	encl->pcmd = pcmd;
+	encl->emcb_base = NULL;
 
 	return encl;
 }

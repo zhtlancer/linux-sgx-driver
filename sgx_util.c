@@ -210,6 +210,8 @@ out:
 	return ret;
 }
 
+#define SHM_DEBUG 0
+
 static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 					  unsigned long addr,
 					  unsigned int flags,
@@ -233,6 +235,90 @@ static struct sgx_encl_page *sgx_do_fault(struct vm_area_struct *vma,
 
 	entry = radix_tree_lookup(&encl->page_tree, addr >> PAGE_SHIFT);
 	if (vmf && !entry) {
+		if (encl->emcb_base) {
+			void *emcb_base = encl->emcb_base;
+			uint16_t buf[2];
+			int len;
+			unsigned long cb_offset = addr / encl->emcb_chunk_size;
+			void *cb_entry = emcb_base + cb_offset * 4;
+
+			len = copy_from_user(buf, cb_entry, 4);
+			if (buf[0] == 1) {
+				uint64_t num_pages = buf[1];
+				int i;
+
+#if SHM_DEBUG
+				printk(KERN_ERR "\temcb_base %p\n"
+						"\taddr: %p\n"
+						"\trange: %p - %p\n"
+						"\tcb_offset %lu cb_entry %p\n"
+						"\tdirection %d page # %d\n",
+						emcb_base, (void *)addr, (void *)addr, (void *)addr + num_pages * PAGE_SIZE,
+						cb_offset, cb_entry,
+						buf[0], buf[1]);
+#endif
+
+				for (i = 0; i < num_pages; i++) {
+					entry = radix_tree_lookup(&encl->page_tree, (addr >> PAGE_SHIFT) + i);
+					if (entry) {
+#if SHM_DEBUG
+						printk(KERN_ERR "%s:%d page already in enclave %p\n",
+								__func__, __LINE__, (void *)addr + i*PAGE_SIZE);
+#endif
+						//goto out;
+						continue;
+					}
+					entry = sgx_encl_augment(vma, addr + i * PAGE_SIZE, write);
+					if (!entry) {
+#if SHM_DEBUG
+						printk(KERN_ERR "eaug failed at %p\n",
+								(void *)addr + i * PAGE_SIZE);
+#endif
+						rc = -EFAULT;
+						goto out;
+					}
+				}
+
+				goto out;
+			} else if (buf[0] == 2) {
+				uint64_t num_pages = buf[1];
+				int i;
+
+#if SHM_DEBUG
+				printk(KERN_ERR "\temcb_base %p\n"
+						"\taddr: %p\n"
+						"\trange: %p - %p\n"
+						"\tcb_offset %lu cb_entry %p\n"
+						"\tdirection %d page # %d\n",
+						emcb_base, (void *)addr, (void *)addr - num_pages * PAGE_SIZE, (void *)addr,
+						cb_offset, cb_entry,
+						buf[0], buf[1]);
+#endif
+
+				for (i = 0; i < num_pages; i++) {
+					entry = radix_tree_lookup(&encl->page_tree, (addr >> PAGE_SHIFT) - i);
+					if (entry) {
+#if SHM_DEBUG
+						printk(KERN_ERR "%s:%d page already in enclave %p\n",
+								__func__, __LINE__, (void *)addr + i*PAGE_SIZE);
+#endif
+						//goto out;
+						continue;
+					}
+					entry = sgx_encl_augment(vma, addr - i * PAGE_SIZE, write);
+					if (!entry) {
+#if SHM_DEBUG
+						printk(KERN_ERR "eaug failed at %p\n",
+								(void *)addr - i * PAGE_SIZE);
+#endif
+						rc = -EFAULT;
+						goto out;
+					}
+				}
+
+				goto out;
+			}
+		}
 		entry = sgx_encl_augment(vma, addr, write);
 		goto out;
 	}

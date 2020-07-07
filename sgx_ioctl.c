@@ -369,6 +369,26 @@ long sgx_ioc_page_remove(struct file *filep, unsigned int cmd,
 	return ret;
 }
 
+static long sgx_ioc_emcb_base(struct file *filep, unsigned int cmd,
+		unsigned long arg)
+{
+	struct sgx_enclave_init *initp = (struct sgx_enclave_init *)arg;
+	struct sgx_encl *encl;
+	int rval;
+
+	rval = sgx_get_encl(initp->addr, &encl);
+	if (rval)
+		return -EINVAL;
+
+	encl->emcb_base = (void *)initp->sigstruct;
+	encl->emcb_chunk_size = (unsigned long)initp->einittoken;
+	printk(KERN_INFO "emcb base is set: %p, chunk size: %lu\n",
+			encl->emcb_base, encl->emcb_chunk_size);
+
+	kref_put(&encl->refcount, sgx_encl_release);
+	return 0;
+}
+
 typedef long (*sgx_ioc_t)(struct file *filep, unsigned int cmd,
 			  unsigned long arg);
 
@@ -402,6 +422,9 @@ long sgx_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 	case SGX_IOC_ENCLAVE_PAGE_REMOVE:
 		handler = sgx_ioc_page_remove;
+		break;
+	case SGX_IOC_ENCLAVE_EMCB_BASE:
+		handler = sgx_ioc_emcb_base;
 		break;
 	default:
 		return -ENOIOCTLCMD;

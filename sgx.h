@@ -175,6 +175,8 @@ struct sgx_encl {
 	struct list_head encl_list;
 	struct mmu_notifier mmu_notifier;
 	unsigned int shadow_epoch;
+	void *emcb_base;
+	unsigned long emcb_chunk_size;
 };
 
 struct sgx_epc_bank {
