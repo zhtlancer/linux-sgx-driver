@@ -105,11 +105,7 @@ struct sgx_encl_page *sgx_encl_augment(struct vm_area_struct *vma,
 		return ERR_PTR(PTR_ERR(epc_page));
 	}
 
-	va_page = sgx_alloc_page(SGX_ALLOC_ATOMIC);
-	if (IS_ERR(va_page)) {
-		sgx_free_page(epc_page, encl);
-		return ERR_PTR(PTR_ERR(va_page));
-	}
+	va_page = NULL;
 
 	encl_page = kzalloc(sizeof(struct sgx_encl_page), GFP_KERNEL);
 	if (!encl_page) {
@@ -130,7 +126,7 @@ struct sgx_encl_page *sgx_encl_augment(struct vm_area_struct *vma,
 	*/
 
 	/* Start the augmenting process */
-	ret = sgx_init_page(encl, encl_page, addr, 0, &va_page, true);
+	ret = sgx_init_page(encl, encl_page, addr, SGX_ALLOC_ATOMIC, NULL, true);
 	if (ret)
 		goto out;
 
@@ -180,7 +176,7 @@ struct sgx_encl_page *sgx_encl_augment(struct vm_area_struct *vma,
 	sgx_put_page(secs_va);
 	if (ret) {
 #endif
-		pr_err("sgx: vm_insert_pfn failure with ret=%d\n", ret);
+		pr_err("sgx: vm_insert_pfn addr %p failure with ret=%d\n", (void *)addr, ret);
 		goto out;
 	}
 
