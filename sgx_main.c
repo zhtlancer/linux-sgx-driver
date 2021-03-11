@@ -118,13 +118,24 @@ static const char *sgx_profile_str[] = {
 	"EMODT",    // 0xF
 
 	/* Other operations */
-	"swap",     // 0x10
+	"swap",         // 0x10
 	"vma_fault",    // 0x11
-	"alloc_page",    // 0x12
+	"alloc_page",   // 0x12
 	"free_page",    // 0x13
-	"evict",    // 0x14
+	"evict",        // 0x14
 	"swap_time",    // 0x15
-	"ioc_remove_page",    // 0x15
+
+    /* IOCs */
+	"ioc_create",           // 0x16
+	"ioc_add_page",         // 0x17
+	"ioc_init",             // 0x18
+	"ioc_emodpr",           // 0x19
+	"ioc_mktcs",            // 0x1a
+	"ioc_trim_page",        // 0x1b
+	"ioc_page_notify_accept",   // 0x1c
+	"ioc_remove_page",      // 0x1d
+
+	"SGX2 TRIMMED PAGES",      // 0x1e
 };
 
 atomic_t profile_sgx_cnt[PROFILE_SGX_CNT_NUM] = { ATOMIC_INIT(0) };
@@ -322,6 +333,7 @@ static int proc_sgx_profile_show(struct seq_file *seqf, void *v)
 	for (i = 0; i < PROFILE_SGX_CNT_NUM; i++)
 		seq_printf(seqf, "%d %s %u\n",
 				i, sgx_profile_str[i], atomic_read(&profile_sgx_cnt[i]));
+    proc_page_stats_show(seqf);
 	return 0;
 }
 

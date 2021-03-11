@@ -69,6 +69,7 @@
 	#include <linux/signal.h>
 #endif
 #include <linux/slab.h>
+#include <linux/seq_file.h>
 
 #define SGX_NR_LOW_EPC_PAGES_DEFAULT 32
 #define SGX_NR_SWAP_CLUSTER_MAX	16
@@ -586,4 +587,12 @@ void sgx_put_page(void *epc_page_vaddr)
 	kunmap_atomic(epc_page_vaddr);
 #else
 #endif
+}
+
+void proc_page_stats_show(struct seq_file *seqf)
+{
+    seq_printf(seqf, "- sgx_nr_total_epc_pages %u\n", sgx_nr_total_epc_pages);
+    seq_printf(seqf, "- sgx_nr_free_pages %u\n", sgx_nr_free_pages);
+    seq_printf(seqf, "- sgx_nr_low_pages %u\n", sgx_nr_low_pages);
+    seq_printf(seqf, "- sgx_nr_high_pages %u\n", sgx_nr_high_pages);
 }

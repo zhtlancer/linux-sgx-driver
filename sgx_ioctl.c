@@ -119,6 +119,8 @@ static long sgx_ioc_enclave_create(struct file *filep, unsigned int cmd,
 	struct sgx_secs *secs;
 	int ret;
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_CREATE]);
+
 	secs = kzalloc(sizeof(*secs),  GFP_KERNEL);
 	if (!secs)
 		return -ENOMEM;
@@ -159,6 +161,8 @@ static long sgx_ioc_enclave_add_page(struct file *filep, unsigned int cmd,
 	struct page *data_page;
 	void *data;
 	int ret;
+
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_ADD_PAGE]);
 
 	ret = sgx_get_encl(addp->addr, &encl);
 	if (ret)
@@ -219,6 +223,8 @@ static long sgx_ioc_enclave_init(struct file *filep, unsigned int cmd,
 	struct page *initp_page;
 	int ret;
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_INIT]);
+
 	initp_page = alloc_page(GFP_HIGHUSER);
 	if (!initp_page)
 		return -ENOMEM;
@@ -257,6 +263,7 @@ long sgx_ioc_page_modpr(struct file *filep, unsigned int cmd,
 	struct sgx_modification_param *p =
 		(struct sgx_modification_param *) arg;
 
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_EMODPR]);
 	/*
 	 * Only RWX flags in mask are allowed
 	 * Restricting WR w/o RD is not allowed
@@ -278,6 +285,7 @@ long sgx_ioc_page_modpr(struct file *filep, unsigned int cmd,
 long sgx_ioc_page_to_tcs(struct file *filep, unsigned int cmd,
 			 unsigned long arg)
 {
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_MKTCS]);
 	return modify_range((struct sgx_range *)arg, SGX_SECINFO_TCS);
 }
 
@@ -290,6 +298,8 @@ long sgx_ioc_page_to_tcs(struct file *filep, unsigned int cmd,
 long sgx_ioc_trim_page(struct file *filep, unsigned int cmd,
 		       unsigned long arg)
 {
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_TRIM_PAGE]);
+
 	return modify_range((struct sgx_range *)arg, SGX_SECINFO_TRIM);
 }
 
@@ -310,7 +320,11 @@ long sgx_ioc_page_notify_accept(struct file *filep, unsigned int cmd,
 	if (!sgx_has_sgx2)
 		return -ENOSYS;
 
-	rg = (struct sgx_range *)arg;
+	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_PAGE_NOTIFY_ACCEPT]);
+
+	rg = (struct sgx_ragne *)arg;
+
+    atomic_add(rg->nr_pages, &profile_sgx_cnt[PROFILE_SGX2_TRIMMED_PAGES]);
 
 	address = rg->start_addr;
 	address &= ~(PAGE_SIZE-1);

@@ -278,4 +278,6 @@ long modify_range(struct sgx_range *rg, unsigned long flags);
 int remove_page(struct sgx_encl *encl, unsigned long address, bool trim);
 int sgx_get_encl(unsigned long addr, struct sgx_encl **encl);
 
+void proc_page_stats_show(struct seq_file *seqf);
+
 #endif /* __ARCH_X86_INTEL_SGX_H__ */
