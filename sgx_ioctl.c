@@ -322,7 +322,7 @@ long sgx_ioc_page_notify_accept(struct file *filep, unsigned int cmd,
 
 	atomic_inc(&profile_sgx_cnt[PROFILE_IOC_PAGE_NOTIFY_ACCEPT]);
 
-	rg = (struct sgx_ragne *)arg;
+	rg = (struct sgx_range *)arg;
 
     atomic_add(rg->nr_pages, &profile_sgx_cnt[PROFILE_SGX2_TRIMMED_PAGES]);
 
