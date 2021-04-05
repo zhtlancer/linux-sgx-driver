@@ -98,6 +98,8 @@ u32 sgx_misc_reserved;
 u32 sgx_xsave_size_tbl[64];
 bool sgx_has_sgx2;
 
+static struct proc_dir_entry *ent;
+
 static const char *sgx_profile_str[] = {
 	/* SGX commands */
 	"ECREATE",  // 0x0
@@ -405,7 +407,7 @@ static int sgx_drv_probe(struct platform_device *pdev)
 	sgx_has_sgx2 = (eax & 2) != 0;
 
 	printk(KERN_INFO "SGX profile: profiling %lu events\n", PROFILE_SGX_CNT_NUM);
-	proc_create("sgx_profile_cnt", S_IRUGO|S_IWUGO, NULL, &proc_sgx_profile_cnt_ops);
+	ent = proc_create("sgx_profile_cnt", S_IRUGO|S_IWUGO, NULL, &proc_sgx_profile_cnt_ops);
 
 	return sgx_dev_init(&pdev->dev);
 }
@@ -418,6 +420,9 @@ static int sgx_drv_remove(struct platform_device *pdev)
 		pr_warn("intel_sgx: second release call skipped\n");
 		return 0;
 	}
+
+	proc_remove(ent);
+	ent = NULL;
 
 	misc_deregister(&sgx_dev);
 
